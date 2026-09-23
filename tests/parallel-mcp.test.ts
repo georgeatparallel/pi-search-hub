@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -47,17 +47,21 @@ function createProject(searchConfig: Record<string, unknown>) {
 function registerSearchHub(projectDir: string) {
 	refreshConfig(projectDir, true);
 	const registeredTools = new Map<string, unknown>();
+	const registeredCommands = new Map<string, unknown>();
 	const eventHandlers = new Map<string, (...args: any[]) => unknown>();
 	const context = { cwd: projectDir, ui: { setStatus: vi.fn() } };
 	searchHub({
 		registerTool: (tool: { name: string }) => registeredTools.set(tool.name, tool),
-		registerCommand: vi.fn(),
+		registerCommand: (name: string, command: unknown) => {
+			registeredCommands.set(name, command);
+		},
 		on: (event: string, handler: (...args: any[]) => unknown) => eventHandlers.set(event, handler),
 	} as never);
 	const sessionStartHandler = eventHandlers.get("session_start");
 	if (!sessionStartHandler) throw new Error("Search hub did not register session_start.");
 	return {
 		webSearchTool: registeredTools.get("web_search") as WebSearchTool,
+		registeredCommands,
 		context,
 		startSession: async () => {
 			await sessionStartHandler({}, context);
@@ -178,6 +182,66 @@ describe("Parallel Search MCP backend", () => {
 		config.backends = {};
 		config.defaultBackend = "duckduckgo";
 		clearCooldowns();
+	});
+
+	it("enables Parallel through /search-setup and reports the written effective configuration", async () => {
+		const { tempRoot, projectDir } = createProject({});
+		try {
+			const globalConfigDir = join(tempRoot, "home", ".pi", "agent", "extensions");
+			mkdirSync(globalConfigDir, { recursive: true });
+			const globalConfigPath = join(globalConfigDir, "search.json");
+			writeFileSync(globalConfigPath, JSON.stringify({
+				defaultBackend: "duckduckgo",
+				selectionStrategy: "random",
+				backends: {
+					serper: { enabled: false, apiKey: "SERPER_API_KEY" },
+				},
+			}));
+
+			const { registeredCommands } = registerSearchHub(projectDir);
+			const setupCommand = registeredCommands.get("search-setup") as {
+				handler: (args: string, ctx: unknown) => Promise<void>;
+			};
+			const select = vi.fn().mockResolvedValue("⚡ Enable all free backends");
+			const notify = vi.fn();
+			await setupCommand.handler("", { hasUI: true, ui: { select, notify } });
+
+			expect(select).toHaveBeenCalledWith(
+				"Which backend do you want to configure?",
+				expect.arrayContaining(["⚡ Enable all free backends"]),
+			);
+			const writtenConfig = JSON.parse(readFileSync(globalConfigPath, "utf-8"));
+			expect(writtenConfig).toMatchObject({
+				defaultBackend: "duckduckgo",
+				selectionStrategy: "random",
+				backends: {
+					serper: { enabled: false, apiKey: "SERPER_API_KEY" },
+					duckduckgo: { enabled: true },
+					jina: { enabled: true },
+					marginalia: { enabled: true },
+					exa_mcp: { enabled: true },
+					parallel_mcp: { enabled: true },
+					searxng: { enabled: true },
+				},
+			});
+
+			const activeBackends = refreshConfig(projectDir, true);
+			expect(config.defaultBackend).toBe("duckduckgo");
+			expect(activeBackends).toEqual(expect.arrayContaining([
+				"duckduckgo",
+				"jina",
+				"marginalia",
+				"exa_mcp",
+				"parallel_mcp",
+				"searxng",
+			]));
+			expect(notify).toHaveBeenCalledWith(
+				"Enabled: DuckDuckGo, Jina, Marginalia, Exa MCP, Parallel Search MCP, SearXNG. Run /reload to activate.",
+				"success",
+			);
+		} finally {
+			rmSync(tempRoot, { recursive: true, force: true });
+		}
 	});
 
 	it("uses anonymous MCP, sends attribution, rejects redirects, and maps useful results", async () => {

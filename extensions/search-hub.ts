@@ -660,6 +660,7 @@ export default function (pi: ExtensionAPI) {
 			"jina",
 			"marginalia",
 			"exa_mcp",
+			"parallel_mcp",
 			"searxng",
 		];
 
@@ -675,7 +676,7 @@ export default function (pi: ExtensionAPI) {
 
 		writeFileSync(configPath, JSON.stringify(updated, null, 2) + "\n", { mode: 0o600 });
 		ctx.ui.notify(
-			`Enabled: DuckDuckGo, Jina, Marginalia, Exa MCP, SearXNG. Run /reload to activate.`,
+			`Enabled: DuckDuckGo, Jina, Marginalia, Exa MCP, Parallel Search MCP, SearXNG. Run /reload to activate.`,
 			"success",
 		);
 	}
