@@ -14,6 +14,7 @@ import { searchSerper } from "./serper.js";
 import { searchTavily } from "./tavily.js";
 import { searchExa } from "./exa.js";
 import { searchExaMCP } from "./exa-mcp.js";
+import { searchParallelMCP } from "./parallel-mcp.js";
 import { searchOpenAICodex } from "./openai-codex.js";
 import { searchBrave } from "./brave.js";
 import { searchLangSearch } from "./langsearch.js";
@@ -119,6 +120,18 @@ export const BACKEND_DEFS: Record<string, BackendRunner> = {
 		setupLabel: "Exa MCP (zero-config, no API key needed)",
 		search: async (query, numResults, { signal }) => {
 			const result = await searchExaMCP(query, numResults, signal);
+			return { results: result.results };
+		},
+	},
+	parallel_mcp: {
+		needsKey: false,
+		needsKeyFromConfig: false,
+		optionalKey: false,
+		needsInstanceUrl: false,
+		label: "Parallel Search MCP",
+		setupLabel: "Parallel Search MCP (free, rate-limited, no API key needed)",
+		search: async (query, numResults, { signal }) => {
+			const result = await searchParallelMCP(query, numResults, signal);
 			return { results: result.results };
 		},
 	},

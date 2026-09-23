@@ -1,5 +1,5 @@
 /**
- * Extension — Unified web search (19 backends) + content extraction (web_read)
+ * Extension — Unified web search (20 backends) + content extraction (web_read)
  *
  * Backends (choose any, all disabled by default):
  *   duckduckgo    — ✅ Free, no key, via Python ddgs lib. Rate-limited.
@@ -70,7 +70,7 @@ export default function (pi: ExtensionAPI) {
 		label: "Web Search",
 		description:
 			"Search the web using one of several backend search engines. " +
-			"Supports DuckDuckGo (free, no key), " +
+			"Supports DuckDuckGo (free, no key), Parallel Search MCP (free, no key), " +
 			"Marginalia Search (free, shared public key), Serper, Tavily, Exa, Brave, " +
 			"LangSearch, Firecrawl, WebSearchAPI, Perplexity Sonar, and SearXNG (most need API keys). " +
 			"The best available backend is used automatically. " +
@@ -95,7 +95,7 @@ export default function (pi: ExtensionAPI) {
 				}),
 			),
 			backend: Type.Optional(
-				StringEnum(["duckduckgo", "jina", "marginalia", "serper", "tavily", "exa", "exa_mcp",
+				StringEnum(["duckduckgo", "jina", "marginalia", "serper", "tavily", "exa", "exa_mcp", "parallel_mcp",
 					"openai-codex", "brave", "brave-llm", "langsearch", "firecrawl", "websearchapi", "perplexity",
 					"searxng", "linkup", "youcom", "fastcrw", "sofya", "auto"] as const, {
 					description:
@@ -853,6 +853,8 @@ export default function (pi: ExtensionAPI) {
 
 				if (name === "duckduckgo") {
 					rows.push([label, "\u2713 enabled, key: \u2014 (free)", avgLatency]);
+				} else if (name === "parallel_mcp" && bc?.enabled) {
+					rows.push([label, "\u2713 enabled, key: \u2014 (free MCP)", avgLatency]);
 				} else if (name === "marginalia" && bc?.enabled) {
 					rows.push([label, "\u2713 enabled, key: optional (public)", avgLatency]);
 				} else if (name === "searxng" && bc?.enabled) {
