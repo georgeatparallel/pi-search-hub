@@ -126,12 +126,15 @@ export const BACKEND_DEFS: Record<string, BackendRunner> = {
 	parallel_mcp: {
 		needsKey: false,
 		needsKeyFromConfig: false,
-		optionalKey: false,
+		optionalKey: true,
 		needsInstanceUrl: false,
 		label: "Parallel Search MCP",
-		setupLabel: "Parallel Search MCP (free, rate-limited, no API key needed)",
-		search: async (query, numResults, { signal }) => {
-			const result = await searchParallelMCP(query, numResults, signal);
+		setupLabel: "Parallel Search MCP (free anonymous access; optional API key)",
+		search: async (query, numResults, { key, signal, backendConfig }) => {
+			if (backendConfig?.apiKey && !key) {
+				throw new Error("Parallel Search MCP API key was configured but could not be resolved; refusing an anonymous request.");
+			}
+			const result = await searchParallelMCP(query, numResults, signal, key);
 			return { results: result.results };
 		},
 	},

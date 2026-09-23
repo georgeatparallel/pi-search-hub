@@ -51,6 +51,7 @@ import { getKeySource } from "./credentials.js";
 import { fetchWithReader, fetchWithFallback, readerLabel, DEFAULT_READER_FALLBACK } from "./readers/dispatch.js";
 import { config, refreshConfig, getActiveBackends, recordLatency, latencyMap } from "./config.js";
 import { BACKEND_DEFS, runBackend } from "./backends/registry.js";
+import { startParallelMCPSession } from "./backends/parallel-mcp.js";
 import { selectBackendsForFallback, reciprocalRankFusion, runTargetedCombine } from "./dispatch.js";
 import { formatResults, formatCombinedResults, formatResultsCompact, formatCombinedResultsCompact } from "./formatters.js";
 
@@ -70,7 +71,7 @@ export default function (pi: ExtensionAPI) {
 		label: "Web Search",
 		description:
 			"Search the web using one of several backend search engines. " +
-			"Supports DuckDuckGo (free, no key), Parallel Search MCP (free, no key), " +
+			"Supports DuckDuckGo (free, no key), Parallel Search MCP (free anonymous access, optional key), " +
 			"Marginalia Search (free, shared public key), Serper, Tavily, Exa, Brave, " +
 			"LangSearch, Firecrawl, WebSearchAPI, Perplexity Sonar, and SearXNG (most need API keys). " +
 			"The best available backend is used automatically. " +
@@ -854,7 +855,8 @@ export default function (pi: ExtensionAPI) {
 				if (name === "duckduckgo") {
 					rows.push([label, "\u2713 enabled, key: \u2014 (free)", avgLatency]);
 				} else if (name === "parallel_mcp" && bc?.enabled) {
-					rows.push([label, "\u2713 enabled, key: \u2014 (free MCP)", avgLatency]);
+					const keyStatus = configured ? "configured" : source ? "unresolved" : "anonymous";
+					rows.push([label, "\u2713 enabled, key: " + keyStatus + " (free MCP)", avgLatency]);
 				} else if (name === "marginalia" && bc?.enabled) {
 					rows.push([label, "\u2713 enabled, key: optional (public)", avgLatency]);
 				} else if (name === "searxng" && bc?.enabled) {
@@ -915,6 +917,7 @@ export default function (pi: ExtensionAPI) {
 	// -----------------------------------------------------------------------
 
 	pi.on("session_start", async (_event, ctx) => {
+		startParallelMCPSession();
 		clearCooldowns();
 		refreshConfig(ctx.cwd);
 		if (config.showStatus !== false) {
