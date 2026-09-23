@@ -195,6 +195,7 @@ describe("Parallel Search MCP backend", () => {
 				selectionStrategy: "random",
 				backends: {
 					serper: { enabled: false, apiKey: "SERPER_API_KEY" },
+					parallel_mcp: { enabled: false, apiKey: "PARALLEL_API_KEY", timeout: 12000 },
 				},
 			}));
 
@@ -220,7 +221,7 @@ describe("Parallel Search MCP backend", () => {
 					jina: { enabled: true },
 					marginalia: { enabled: true },
 					exa_mcp: { enabled: true },
-					parallel_mcp: { enabled: true },
+					parallel_mcp: { enabled: true, apiKey: "PARALLEL_API_KEY", timeout: 12000 },
 					searxng: { enabled: true },
 				},
 			});

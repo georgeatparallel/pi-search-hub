@@ -669,7 +669,7 @@ export default function (pi: ExtensionAPI) {
 			backends: {
 				...existing.backends,
 				...Object.fromEntries(
-					freeBackends.map(name => [name, { enabled: true }])
+					freeBackends.map(name => [name, { ...existing.backends?.[name], enabled: true }])
 				),
 			},
 		};
